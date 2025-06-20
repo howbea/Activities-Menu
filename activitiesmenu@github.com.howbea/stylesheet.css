@@ -1,0 +1,28 @@
+/* Add your custom extension styling here */
+.activities-menu-box {
+  
+}
+
+#panel .panel-button#panelActivitiesMenu StBoxLayout {
+  padding: 0 6px;
+}
+
+.activities-icon {
+  -st-icon-style: symbolic;
+  icon-size: 16px
+}  
+  
+.popup-menu.panel-menu .user-icon {
+  icon-size: 24px
+}
+  
+.popup-menu.panel-menu .user-icon.user-avatar {
+  box-shadow: none; }
+
+.popup-menu.panel-menu .user-widget.horizontal {
+  spacing: 6px; }
+  
+  
+.aaaa {
+  icon-size: 24px;
+  }
