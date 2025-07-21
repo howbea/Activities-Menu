@@ -24,13 +24,98 @@ import Atk from 'gi://Atk';
 import Gio from 'gi://Gio';
 import Shell from 'gi://Shell';
 import AccountsService from 'gi://AccountsService';
+import Graphene from 'gi://Graphene';
 
 import {Extension, gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as userWidget from 'resource:///org/gnome/shell/ui/userWidget.js';
+import * as AppFavorites from "resource:///org/gnome/shell/ui/appFavorites.js";
+import * as Util from 'resource:///org/gnome/shell/misc/util.js';
+import {PlacesManager} from './placeDisplay.js';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+
+Gio._promisify(Gio.AppInfo, 'launch_default_for_uri_async');
+
+class PlaceMenuItem extends PopupMenu.PopupImageMenuItem { //PopupMenu.PopupMenuItem {
+    static {
+        GObject.registerClass(this);
+    }
+
+    constructor(info) {
+        super(info.name, info.icon, {
+        //super(info.name, {
+            style_class: 'place-menu-item',
+        });
+        this._info = info;
+
+        if (info.isRemovable()) {
+            this._ejectIcon = new St.Icon({
+                icon_name: 'media-eject-symbolic',
+                style_class: 'popup-menu-icon',
+            });
+            this._ejectButton = new St.Button({
+                child: this._ejectIcon,
+                style_class: 'button',
+            });
+            this._ejectButton.connect('clicked', info.eject.bind(info));
+            this.add_child(this._ejectButton);
+        }
+
+        info.connectObject('changed',
+            this._propertiesChanged.bind(this), this);
+    }
+
+    activate(event) {
+        this._info.launch(event.get_time());
+
+        super.activate(event);
+    }
+
+    _propertiesChanged(info) {
+        this.setIcon(info.icon);
+        this.label.text = info.name;
+    }
+}
+
+const SECTIONS = [
+    'special',
+    //'devices',
+    //'bookmarks',
+    //'network',
+];
+
+const SECTIONS2 = [
+    //'special',
+    'devices',
+    //'bookmarks',
+    //'network',
+];
+
+const SECTIONS3 = [
+    //'home',
+    //'special',
+    //'devices',
+    'bookmarks',
+    //'network',
+];
+
+const SECTIONS4 = [
+    //'home',
+    //'special',
+    //'devices',
+    //'bookmarks',
+    'network1',
+];
+
+const SECTIONS5 = [
+    //'home',
+    //'special',
+    //'devices',
+    //'bookmarks',
+    'network',
+];
 
 const ActivitiesMenuButton = GObject.registerClass(
 class ActivitiesMenuButton extends PanelMenu.Button {
@@ -57,13 +142,13 @@ class ActivitiesMenuButton extends PanelMenu.Button {
         this._container.add_child(this._iconBox);        
           
         this._label = new St.Label({
-            text: _('andRose'),
+            text: _('GNOME'),
             y_align: Clutter.ActorAlign.CENTER,
         });        
         this._container.add_child(this._label);
         
         const icon = new St.Icon({
-            icon_name: 'rose',
+            icon_name: 'start-here',
             style_class: 'activities-icon',
         });
         this._iconBox.set_child(icon);
@@ -87,63 +172,205 @@ class ActivitiesMenuButton extends PanelMenu.Button {
             this.smitema.menu.removeAll();
             this.appsMenu();
         });
+    } 
+    
+    placesMenu() {
+        this.placesManager = new PlacesManager();
+
+        this._sections = { };
+
+        for (let i = 0; i < SECTIONS.length; i++) {
+            let id = SECTIONS[i];
+            this._sections[id] = new PopupMenu.PopupMenuSection();
+            this.placesManager.connect(`${id}-updated`, () => {
+                this._redisplay(id);
+            });
+
+            this._create(id);
+            this.addMenuItem(this._sections[id]);
+            //this.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        }
+    }
+    
+    _redisplay(id) {
+        this._sections[id].removeAll();
+        this._create(id);
+    }
+
+    _create(id) {
+        let places = this.placesManager.get(id);
+
+        for (let i = 0; i < places.length; i++)
+            this._sections[id].addMenuItem(new PlaceMenuItem(places[i]));
+
+        this._sections[id].actor.visible = places.length > 0;
+    }
+    
+    placesMenu2() {
+        this.placesManager2 = new PlacesManager();
+
+        this._sections2 = { };
+
+        for (let i = 0; i < SECTIONS2.length; i++) {
+            let id = SECTIONS2[i];
+            this._sections2[id] = new PopupMenu.PopupMenuSection();
+            this.placesManager2.connect(`${id}-updated`, () => {
+                this._redisplay2(id);
+            });
+
+            this._create2(id);
+            this.smitemd.menu.addMenuItem(this._sections2[id]);
+            this.smitemd.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        }
+    }
+    
+    _redisplay2(id) {
+        this._sections2[id].removeAll();
+        this._create2(id);
+    }
+
+    _create2(id) {
+        let places = this.placesManager2.get(id);
+
+        for (let i = 0; i < places.length; i++)
+            this._sections2[id].addMenuItem(new PlaceMenuItem(places[i]));
+
+        this._sections2[id].actor.visible = places.length > 0;
+    }
+    
+    placesMenu3() {
+        this.placesManager3 = new PlacesManager();
+
+        this._sections3 = { };
+
+        for (let i = 0; i < SECTIONS4.length; i++) {
+            let id = SECTIONS4[i];
+            this._sections3[id] = new PopupMenu.PopupMenuSection();
+            this.placesManager3.connect(`${id}-updated`, () => {
+                this._redisplay3(id);
+            });
+
+            this._create3(id);
+            this.smitemd.menu.addMenuItem(this._sections3[id]);
+            this.smitemd.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        }
+    }
+    
+    _redisplay3(id) {
+        this._sections3[id].removeAll();
+        this._create3(id);
+    }
+
+    _create3(id) {
+        let places = this.placesManager3.get(id);
+
+        for (let i = 0; i < places.length; i++)
+            this._sections3[id].addMenuItem(new PlaceMenuItem(places[i]));
+
+        this._sections3[id].actor.visible = places.length > 0;
+    }
+    
+    placesMenu4() {
+        this.placesManager4 = new PlacesManager();
+
+        this._sections4 = { };
+
+        for (let i = 0; i < SECTIONS5.length; i++) {
+            let id = SECTIONS5[i];
+            this._sections4[id] = new PopupMenu.PopupMenuSection();
+            this.placesManager4.connect(`${id}-updated`, () => {
+                this._redisplay4(id);
+            });
+
+            this._create4(id);
+            this.smitemd.menu.addMenuItem(this._sections4[id]);
+            this.smitemd.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        }
+    }
+    
+    _redisplay4(id) {
+        this._sections4[id].removeAll();
+        this._create4(id);
+    }
+
+    _create4(id) {
+        let places = this.placesManager4.get(id);
+
+        for (let i = 0; i < places.length; i++)
+            this._sections4[id].addMenuItem(new PlaceMenuItem(places[i]));
+
+        this._sections4[id].actor.visible = places.length > 0;
     }
     
     appsMenu() {
-        let Web = Gio.AppInfo.get_default_for_type('x-scheme-handler/https', true);
-        let Mail = Gio.AppInfo.get_default_for_type('x-scheme-handler/mailto', true);
-        let Calendar = Gio.AppInfo.get_default_for_type('text/calendar', true);
-        let Music = Gio.AppInfo.get_default_for_type('audio/mpeg', true);
-        let Video = Gio.AppInfo.get_default_for_type('video/mpeg', true);
-        let Photos = Gio.AppInfo.get_default_for_type('image/jpeg', true);
+        let web = Gio.AppInfo.get_default_for_type('x-scheme-handler/https', true);
+        let mail = Gio.AppInfo.get_default_for_type('x-scheme-handler/mailto', true);
+        let calendar = Gio.AppInfo.get_default_for_type('text/calendar', true);
+        let music = Gio.AppInfo.get_default_for_type('audio/mpeg', true);
+        let video = Gio.AppInfo.get_default_for_type('video/mpeg', true);
+        let photos = Gio.AppInfo.get_default_for_type('image/jpeg', true);
+        let files = Gio.AppInfo.get_default_for_type('inode/directory', true);
         
         let itema1 = new PopupMenu.PopupImageMenuItem(_('Web'), 'web-browser-symbolic');
         itema1.connect('activate', () => {
-        Web.launch([], global.create_app_launch_context(0, -1));
+        web.launch([], global.create_app_launch_context(0, -1));
         });
         
         let itema2 = new PopupMenu.PopupImageMenuItem(_('Mail'), 'mail-unread-symbolic');
         itema2.connect('activate', () => {
-        Mail.launch([], global.create_app_launch_context(0, -1));
+        mail.launch([], global.create_app_launch_context(0, -1));
         });
         
         let itema3 = new PopupMenu.PopupImageMenuItem(_('Calendar'), 'x-office-calendar-symbolic');
         itema3.connect('activate', () => {
-        Calendar.launch([], global.create_app_launch_context(0, -1));
+        calendar.launch([], global.create_app_launch_context(0, -1));
         });
         
         let itema4 = new PopupMenu.PopupImageMenuItem(_('Music'), 'audio-x-generic-symbolic');
         itema4.connect('activate', () => {
-        Music.launch([], global.create_app_launch_context(0, -1));
+        music.launch([], global.create_app_launch_context(0, -1));
         });
         
         let itema5 = new PopupMenu.PopupImageMenuItem(_('Video'), 'video-x-generic-symbolic');
         itema5.connect('activate', () => {
-        Video.launch([], global.create_app_launch_context(0, -1));
+        video.launch([], global.create_app_launch_context(0, -1));
         });
         
         let itema6 = new PopupMenu.PopupImageMenuItem(_('Photos'), 'image-x-generic-symbolic');
         itema6.connect('activate', () => {
-        Photos.launch([], global.create_app_launch_context(0, -1));
+        photos.launch([], global.create_app_launch_context(0, -1));
         });
         
-        if(Web)
-        itema1.setIcon(Web.get_icon());
-        if(Mail)
-        itema2.setIcon(Mail.get_icon());
-        if(Calendar)
-        itema3.setIcon(Calendar.get_icon());
-        if(Music)
-        itema4.setIcon(Music.get_icon());
-        if(Video)
-        itema5.setIcon(Video.get_icon());
-        if(Photos)
-        itema6.setIcon(Photos.get_icon());
+        let itema7 = new PopupMenu.PopupImageMenuItem(_('Files'), 'system-file-manager-symbolic');
+        itema7.connect('activate', () => {
+        files.launch([], global.create_app_launch_context(0, -1));
+        });
         
-        this.smitema.menu.addMenuItem(itema1);
-        this.smitema.menu.addMenuItem(itema2);
-        this.smitema.menu.addMenuItem(itema3);
-        this.smitema.menu.addMenuItem(itema6);
+        /*if(web)
+        itema1.setIcon(web.get_icon());
+        if(mail)
+        itema2.setIcon(mail.get_icon());
+        if(calendar)
+        itema3.setIcon(calendar.get_icon());
+        if(music)
+        itema4.setIcon(music.get_icon());
+        if(video)
+        itema5.setIcon(video.get_icon());
+        if(photos)
+        itema6.setIcon(photos.get_icon());*/
+        
+        if(web)
+        this.menu.addMenuItem(itema1);
+        this.smitemf = new PopupMenu.PopupSubMenuMenuItem(_('Files'), true, {});
+        this.smitemf.icon.icon_name = 'system-file-manager-symbolic';
+        if(files)
+        this.menu.addMenuItem(itema7);
+        //if(mail)
+        //this.smitema.menu.addMenuItem(itema2);
+        if(calendar)
+        this.menu.addMenuItem(itema3);
+        if(photos)
+        this.menu.addMenuItem(itema6);        
     }
     
     menu_build() {    
@@ -154,7 +381,7 @@ class ActivitiesMenuButton extends PanelMenu.Button {
         
         let item8 = new PopupMenu.PopupImageMenuItem(_('Settings'), 'org.gnome.Settings-system-symbolic');
         item8.connect('activate', () => {
-        Shell.AppSystem.get_default().lookup_app('org.gnome.Settings.desktop').activate();
+        Shell.AppSystem.get_default().lookup_app('gnome-system-panel.desktop').activate();
         });
         
         let item26 = new PopupMenu.PopupSubMenuMenuItem(_('Users'), true);
@@ -178,7 +405,7 @@ class ActivitiesMenuButton extends PanelMenu.Button {
         });
         
         item26.menu.addMenuItem(item6);
-        //item26.menu.addMenuItem(item21);        
+        item26.menu.addMenuItem(item21);        
         item26.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         item26.menu.addMenuItem(item9);
         
@@ -192,7 +419,7 @@ class ActivitiesMenuButton extends PanelMenu.Button {
         
         let item17 = new PopupMenu.PopupImageMenuItem(_('Help'), 'help-browser-symbolic');
         item17.connect('activate', () => {
-        Gio.AppInfo.launch_default_for_uri_async('https://docs.centos.org/', global.create_app_launch_context(0, -1), null)
+        Gio.AppInfo.launch_default_for_uri_async('https://www.reddit.com/r/gnome/', global.create_app_launch_context(0, -1), null)
         //Shell.AppSystem.get_default().lookup_app('yelp.desktop').activate();
         });        
         
@@ -207,44 +434,57 @@ class ActivitiesMenuButton extends PanelMenu.Button {
             Main.overview.toggle();
         });
         
+        const homeFile = Gio.File.new_for_path(GLib.get_home_dir());
+        //let itemhome = new PopupMenu.PopupImageMenuItem(_('Home'), 'user-home-symbolic');
+        let itemhome = new PopupMenu.PopupImageMenuItem(_('Files'), 'system-file-manager-symbolic');
+        itemhome.connect('activate', () => {
+            Gio.AppInfo.launch_default_for_uri_async(homeFile.get_uri(), global.create_app_launch_context(0, -1), null);
+        });
+        
         let itemr = new PopupMenu.PopupImageMenuItem(_('Recent'), 'document-open-recent-symbolic');
         itemr.connect('activate', () => {
             Gio.AppInfo.launch_default_for_uri_async('recent:///', global.create_app_launch_context(0, -1), null);
         });
         
-        let itemapps = new PopupMenu.PopupImageMenuItem(_('Apps'), 'view-appgrid');
-        itemapps.connect("activate", () => {
-            if (Main.overview.shouldToggleByCornerOrButton()) {
-            if(Main.overview.dash.showAppsButton.checked) {
-            Main.overview.dash.showAppsButton.checked = false;
-            }
-            else {
-            if (Main.overview.shouldToggleByCornerOrButton())
-                Main.overview.show();
-            Main.overview.dash.showAppsButton.checked = true;
-            }
-            }
+        const appSystem = Shell.AppSystem.get_default();
+        const nautilusApp = appSystem.lookup_app('org.gnome.Nautilus.desktop');
+        const defaultFm = Gio.AppInfo.get_default_for_type('inode/directory', true);
+        const showNautilusSpecials =
+            nautilusApp && defaultFm && nautilusApp.appInfo.equal(defaultFm);
+
+        let items = new PopupMenu.PopupImageMenuItem(_('Starred'), 'starred-symbolic');        
+        items.connect('activate', () => {
+            nautilusApp.appInfo.launch([Gio.File.new_for_uri('starred:///')], global.create_app_launch_context(0, -1));
         });
         
-        
+        let itemn = new PopupMenu.PopupImageMenuItem(_('Network'), 'network-workgroup-symbolic');        
+        itemn.connect('activate', () => {
+            nautilusApp.appInfo.launch([Gio.File.new_for_uri('x-network-view:///')], global.create_app_launch_context(0, -1));
+        });
         
         this.menu.addMenuItem(item);
-        this.menu.addMenuItem(itemapps);
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        //this.menu.addMenuItem(this.smitema);
-        //this.appsMenu();
+        this.appsMenu();
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        
-       // this.menu.addMenuItem(itemr);
+        //this.menu.addMenuItem(itemhome);
+        //this.menu.addMenuItem(itemr);
+        if(showNautilusSpecials) {
+            //this.menu.addMenuItem(items);
+            //this.menu.addMenuItem(itemn);
+        }
+        this.smitemd = new PopupMenu.PopupSubMenuMenuItem(_('Drives'), true, {});
+        this.smitemd.icon.icon_name = 'drive-harddisk-symbolic';
+        //this.menu.addMenuItem(this.smitemd);        
+        this.placesMenu2();
+        this.placesMenu3();
+        this.placesMenu4();
+        //this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        this.menu.addMenuItem(item17);
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());        
         this.menu.addMenuItem(item8);
-        this.menu.addMenuItem(item17);
-        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        this.menu.addMenuItem(item18);
-        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         this.menu.addMenuItem(item26);
-        
-        this.menu.addMenuItem(item7);        
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());        
+        this.menu.addMenuItem(item7);                
     }
 
     handleDragOver(source, _actor, _x, _y, _time) {

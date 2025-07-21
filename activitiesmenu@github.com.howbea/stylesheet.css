@@ -22,7 +22,11 @@
 .popup-menu.panel-menu .user-widget.horizontal {
   spacing: 6px; }
   
-  
-.aaaa {
-  icon-size: 24px;
-  }
+.place-menu-item .button {
+  border-radius: 99px;
+  padding: 3px;
+  min-height: auto;
+}
+
+.place-menu-item .button:ltr { margin-left: 6px; }
+.place-menu-item .button:rtl { margin-right: 6px; }
