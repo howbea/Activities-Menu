@@ -9,7 +9,11 @@
 
 .activities-icon {
   -st-icon-style: symbolic;
-  icon-size: 16px
+  icon-size: 18px
+}
+
+.activities-label {
+  font-family: "Poppl-Laudatio Condensed";
 }  
   
 .popup-menu.panel-menu .user-icon {
@@ -30,3 +34,7 @@
 
 .place-menu-item .button:ltr { margin-left: 6px; }
 .place-menu-item .button:rtl { margin-right: 6px; }
+
+.place-menu-item {
+ width: 160px;
+}

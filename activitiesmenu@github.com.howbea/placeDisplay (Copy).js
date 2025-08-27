@@ -34,7 +34,7 @@ class PlaceInfo extends EventEmitter {
         this.kind = kind;
         this.file = file;
         this.name = name || this._getFileName();
-        this.icon = icon ? new Gio.ThemedIcon({name: icon}) : this.getIcon();
+        this.icon = icon? new Gio.ThemedIcon({name: icon}) : this.getIcon();
     }
 
     destroy() {
@@ -214,24 +214,17 @@ class PlaceVolumeInfo extends PlaceInfo {
     }
 }
 
-const DEFAULT_DIRECTORIES = [
-    GLib.UserDirectory.DIRECTORY_DOCUMENTS,
-    GLib.UserDirectory.DIRECTORY_PICTURES,
-    GLib.UserDirectory.DIRECTORY_MUSIC,
-    GLib.UserDirectory.DIRECTORY_DOWNLOAD,
-    GLib.UserDirectory.DIRECTORY_VIDEOS,
-];
-
 export class PlacesManager extends EventEmitter {
     constructor() {
         super();
 
         this._places = {
+            home: [],
             special: [],
-            default: [],
             devices: [],
             bookmarks: [],
             network: [],
+            network1: [],
         };
 
         this._settings = new Gio.Settings({schema_id: BACKGROUND_SCHEMA});
@@ -244,16 +237,6 @@ export class PlacesManager extends EventEmitter {
         this._privacySettings.connectObject('changed::remember-recent-files',
             () => this._updateSpecials(), this);
         this._updateSpecials();
-        
-        this._settings.connectObject('changed::show-desktop-icons',
-            () => this._updateDefaults(), this);
-
-        this._privacySettings = new Gio.Settings({
-            schema_id: 'org.gnome.desktop.privacy',
-        });
-        this._privacySettings.connectObject('changed::remember-recent-files',
-            () => this._updateDefaults(), this);        
-        this._updateDefaults()
 
         /*
         * Show devices, code more or less ported from nautilus-places-sidebar.c
@@ -319,6 +302,8 @@ export class PlacesManager extends EventEmitter {
     _updateSpecials() {
         this._places.special.forEach(p => p.destroy());
         this._places.special = [];
+        this._places.home.forEach(p => p.destroy());
+        this._places.home = [];
 
         const appSystem = Shell.AppSystem.get_default();
         const nautilusApp = appSystem.lookup_app('org.gnome.Nautilus.desktop');
@@ -332,6 +317,11 @@ export class PlacesManager extends EventEmitter {
             'special',
             homeFile,
             _('Home')));
+            
+        this._places.home.push(new PlaceInfo(
+            'home',
+            homeFile,
+            _('Home')));
 
         if (this._shouldShowRecent()) {
             this._places.special.push(new PlaceInfo(
@@ -340,14 +330,14 @@ export class PlacesManager extends EventEmitter {
                 _('Recent')));
         }
 
-        if (showNautilusSpecials) {
+        /*if (showNautilusSpecials) {
             this._places.special.push(new NautilusSpecialInfo(
                 Gio.File.new_for_uri('starred:///'),
                 _('Starred'),
                 'starred-symbolic'));
         }
 
-        if (this._settings.get_boolean('show-desktop-icons')) {
+        /*if (this._settings.get_boolean('show-desktop-icons')) {
             const desktopPath = GLib.get_user_special_dir(
                 GLib.UserDirectory.DIRECTORY_DESKTOP);
             const desktopFile = desktopPath
@@ -358,61 +348,21 @@ export class PlacesManager extends EventEmitter {
                 this._places.special.push(
                     new PlaceInfo('special', desktopFile));
             }
-        }
+        }*/
 
-        if (showNautilusSpecials) {
+        /*if (showNautilusSpecials) {
             this._places.special.push(new NautilusSpecialInfo(
                 Gio.File.new_for_uri('x-network-view:///'),
                 _('Network'),
                 'network-workgroup-symbolic'));
         }
 
-        /*this._places.special.push(new PlaceInfo(
+        this._places.special.push(new PlaceInfo(
             'special',
             Gio.File.new_for_uri('trash:///'),
             _('Trash')));*/
 
         this.emit('special-updated');
-    }
-    
-    _updateDefaults() {
-        this._places.default.forEach(p => p.destroy());
-        this._places.default = [];
-
-        let homePath = GLib.get_home_dir();
-
-        this._places.default.push(new PlaceInfo(
-            'default',
-            Gio.File.new_for_path(homePath),
-            _('Home')));
-
-        let defaults = [];
-        let dirs = DEFAULT_DIRECTORIES.slice();
-
-        if (this._settings.get_boolean('show-desktop-icons'))
-            dirs.push(GLib.UserDirectory.DIRECTORY_DESKTOP);
-
-        for (let i = 0; i < dirs.length; i++) {
-            let defaultPath = GLib.get_user_special_dir(dirs[i]);
-            if (!defaultPath || defaultPath === homePath)
-                continue;
-
-            let file = Gio.File.new_for_path(defaultPath), info;
-            try {
-                info = new PlaceInfo('default', file);
-            } catch (e) {
-                if (e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.NOT_FOUND))
-                    continue;
-                throw e;
-            }
-
-            defaults.push(info);
-        }
-
-        defaults.sort((a, b) => GLib.utf8_collate(a.name, b.name));
-        this._places.default = this._places.default.concat(defaults);
-
-        this.emit('default-updated');
     }
 
     _updateMounts() {
@@ -440,6 +390,11 @@ export class PlacesManager extends EventEmitter {
                 }
             }
         }
+        
+        this._places.network1.push(new NautilusSpecialInfo(
+                Gio.File.new_for_uri('x-network-view:///'),
+                _('Network'),
+                'network-workgroup-symbolic'));
 
         /* add all volumes that is not associated with a drive */
         let volumes = this._volumeMonitor.get_volumes();
@@ -512,6 +467,12 @@ export class PlacesManager extends EventEmitter {
         let lines = content.split('\n');
 
         let bookmarks = [];
+        /*const homeFile = Gio.File.new_for_path(GLib.get_home_dir());
+        bookmarks.push(new PlaceInfo( //special.push(new PlaceInfo(
+            'bookmarks', //special',
+            homeFile,
+            _('Home')));*/
+            
         for (let i = 0; i < lines.length; i++) {
             let line = lines[i];
             let components = line.split(' ');
@@ -533,16 +494,6 @@ export class PlacesManager extends EventEmitter {
             }
             if (duplicate)
                 continue;
-                
-            for (let j = 0; j < this._places.default.length; j++) {
-                if (file.equal(this._places.default[j].file)) {
-                    duplicate = true;
-                    break;
-                }
-            }
-            if (duplicate)
-                continue;
-                
             for (let j = 0; j < bookmarks.length; j++) {
                 if (file.equal(bookmarks[j].file)) {
                     duplicate = true;
