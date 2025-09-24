@@ -98,33 +98,33 @@ class ActivitiesMenuButton extends PanelMenu.Button {
     menu_build() {
     
         let itemsearch = new PopupMenu.PopupImageMenuItem(_('Search'), 'org.gnome.Settings-search-symbolic', {style_class: 'activities-menu'});
-        item.connect('activate', () => {
+        itemsearch.connect('activate', () => {
         if (Main.overview.shouldToggleByCornerOrButton())
             Main.overview.toggle();
         });
         
         let itemapps = new PopupMenu.PopupImageMenuItem(_('Apps'), 'org.gnome.Settings-applications-symbolic');
-        item28.connect('activate', () => {
+        itemapps.connect('activate', () => {
         Shell.AppSystem.get_default().lookup_app('gnome-applications-panel.desktop').activate();
         });
         
         let itemsettings = new PopupMenu.PopupImageMenuItem(_('Settings'), 'org.gnome.Settings-system-symbolic');
-        item8.connect('activate', () => {
+        itemsettings.connect('activate', () => {
         Shell.AppSystem.get_default().lookup_app('gnome-system-panel.desktop').activate();
         });
         
         let itemusers = new PopupMenu.PopupImageMenuItem(_('Users'), 'org.gnome.Settings-users-symbolic');
-        item26.connect('activate', () => {
+        itemusers.connect('activate', () => {
         Shell.AppSystem.get_default().lookup_app('gnome-users-panel.desktop').activate();
         });
         
         let itemabout = new PopupMenu.PopupImageMenuItem(_('About'), 'org.gnome.Settings-about-symbolic');
-        item7.connect('activate', () => {
+        itemabout.connect('activate', () => {
         Shell.AppSystem.get_default().lookup_app('gnome-about-panel.desktop').activate();
         });
         
         let itemhelp = new PopupMenu.PopupImageMenuItem(_('Help'), 'help-browser-symbolic');
-        item17.connect('activate', () => {
+        itemhelp.connect('activate', () => {
         Gio.AppInfo.launch_default_for_uri_async('https://www.debian.org/support', global.create_app_launch_context(0, -1), null)
         //Shell.AppSystem.get_default().lookup_app('yelp.desktop').activate();
         });    
@@ -163,7 +163,7 @@ class ActivitiesMenuButton extends PanelMenu.Button {
             Gio.AppInfo.launch_default_for_uri_async(downloadFile.get_uri(), global.create_app_launch_context(0, -1), null);
         });
         
-        this.menu.addMenuItem(itemserch);
+        this.menu.addMenuItem(itemsearch);
         this.menu.addMenuItem(itemapps);        
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         this.menu.addMenuItem(itemr);        
