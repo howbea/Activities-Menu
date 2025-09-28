@@ -33,7 +33,6 @@ import * as userWidget from 'resource:///org/gnome/shell/ui/userWidget.js';
 import * as AppFavorites from "resource:///org/gnome/shell/ui/appFavorites.js";
 import * as Util from 'resource:///org/gnome/shell/misc/util.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import * as quicksettings from './quicksettings.js';
 
 Gio._promisify(Gio.AppInfo, 'launch_default_for_uri_async');
 
