@@ -33,8 +33,6 @@ import * as userWidget from 'resource:///org/gnome/shell/ui/userWidget.js';
 import * as AppFavorites from "resource:///org/gnome/shell/ui/appFavorites.js";
 import * as Util from 'resource:///org/gnome/shell/misc/util.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import * as SystemActions from 'resource:///org/gnome/shell/misc/systemActions.js';
-import * as BoxPointer from 'resource:///org/gnome/shell/ui/boxpointer.js';
 
 Gio._promisify(Gio.AppInfo, 'launch_default_for_uri_async');
 
@@ -85,11 +83,18 @@ class PlaceMenuItem extends PopupMenu.PopupImageMenuItem {
 const SECTIONS = [
     'special',
     'bookmarks',
-    'devices',
-    'network',
+    //'devices',
+    //'network',
 ];
 
 const SECTIONS2 = [
+    //'special',
+    'bookmarks',
+    //'devices',
+    //'network',
+];
+
+const SECTIONS3 = [
     //'special',
     //'bookmarks',
     'devices',
@@ -128,46 +133,14 @@ class ActivitiesMenuButton extends PanelMenu.Button {
         //this._container.add_child(this._label);
         
         const icon = new St.Icon({
-            icon_name: 'start-here',
+            icon_name: 'debian',
             style_class: 'activities-icon',
         });
         this._iconBox.set_child(icon);
         
         this.label_actor = this._label;
-        
-        this._systemActions = new SystemActions.getDefault();
 
-        this._createSubMenu();
-
-        this._loginScreenItem.connect('notify::visible',
-            () => this._updateSessionSubMenu());
-        this._logoutItem.connect('notify::visible',
-            () => this._updateSessionSubMenu());
-        this._suspendItem.connect('notify::visible',
-            () => this._updateSessionSubMenu());
-        this._powerOffItem.connect('notify::visible',
-            () => this._updateSessionSubMenu());
-        this._restartItem.connect('notify::visible',
-            () => this._updateSessionSubMenu());
-        // Whether shutdown is available or not depends on both lockdown
-        // settings (disable-log-out) and Polkit policy - the latter doesn't
-        // notify, so we update the menu item each time the menu opens or
-        // the lockdown setting changes, which should be close enough.
-        this.menu.connect('open-state-changed', (menu, open) => {
-            if (!open)
-                return;
-
-            this._systemActions.forceUpdate();
-        });
-        this._updateSessionSubMenu();
-
-        Main.sessionMode.connect('updated', this._sessionUpdated.bind(this));
-        this._sessionUpdated();
-        
-        
-        
-
-        /*this._showingSignal = Main.overview.connect('showing', () => {
+        this._showingSignal = Main.overview.connect('showing', () => {
             this.add_style_pseudo_class('checked');
             this.add_accessible_state(Atk.StateType.CHECKED);
         });        
@@ -175,149 +148,15 @@ class ActivitiesMenuButton extends PanelMenu.Button {
         this._hidingSignal = Main.overview.connect('hiding', () => {
             this.remove_style_pseudo_class('checked');
             this.remove_accessible_state(Atk.StateType.CHECKED);
-        });*/
+        });
 
         this._xdndTimeOut = 0;
-        
-        this._systemActions = new SystemActions.getDefault();
         
         this.menu_build();
         /*this.menu.connect('open-state-changed', (menu, open) => {
             this.menu.removeAll();
             this.menu_build();
         });*/
-    }
-    
-    _sessionUpdated() {
-        this._settingsItem.visible = Main.sessionMode.allowSettings;
-    }
-
-    _updateSessionSubMenu() {
-        this._sessionSubMenu.visible =
-            this._loginScreenItem.visible ||
-            this._logoutItem.visible ||
-            this._suspendItem.visible ||
-            this._restartItem.visible ||
-            this._powerOffItem.visible;
-    }
-
-    _createSubMenu() {
-        let bindFlags = GObject.BindingFlags.DEFAULT | GObject.BindingFlags.SYNC_CREATE;
-        let item;
-        
-
-        item = new PopupMenu.PopupImageMenuItem(
-            this._systemActions.getName('lock-orientation'),
-            this._systemActions.orientation_lock_icon);
-
-        item.connect('activate', () => {
-            this.menu.itemActivated(BoxPointer.PopupAnimation.NONE);
-            this._systemActions.activateLockOrientation();
-        });
-        //this.menu.addMenuItem(item);
-        this._orientationLockItem = item;
-        this._systemActions.bind_property('can-lock-orientation',
-            this._orientationLockItem, 'visible',
-            bindFlags);
-        this._systemActions.connect('notify::orientation-lock-icon', () => {
-            let iconName = this._systemActions.orientation_lock_icon;
-            let labelText = this._systemActions.getName("lock-orientation");
-
-            this._orientationLockItem.setIcon(iconName);
-            this._orientationLockItem.label.text = labelText;
-        });
-
-        let app = this._settingsApp = Shell.AppSystem.get_default().lookup_app(
-            'gnome-control-center.desktop');
-        if (app) {
-            const [icon] = app.app_info.get_icon().names;
-            const name = app.app_info.get_name();
-            item = new PopupMenu.PopupImageMenuItem(name, icon);
-            item.connect('activate', () => {
-                this.menu.itemActivated(BoxPointer.PopupAnimation.NONE);
-                Main.overview.hide();
-                this._settingsApp.activate();
-            });
-            this.menu.addMenuItem(item);
-            this._settingsItem = item;
-        } else {
-            log('Missing required core component Settings, expect trouble…');
-            this._settingsItem = new St.Widget();
-        }
-
-        item = new PopupMenu.PopupImageMenuItem(_('Lock'), 'changes-prevent-symbolic');
-        item.connect('activate', () => {
-            this.menu.itemActivated(BoxPointer.PopupAnimation.NONE);
-            this._systemActions.activateLockScreen();
-        });
-        //this.menu.addMenuItem(item);
-        this._lockScreenItem = item;
-        this._systemActions.bind_property('can-lock-screen',
-            this._lockScreenItem, 'visible',
-            bindFlags);
-
-        this._sessionSubMenu = new PopupMenu.PopupSubMenuMenuItem(
-            _('Power Off'), true);
-        this._sessionSubMenu.icon.icon_name = 'system-shutdown-symbolic';
-
-        item = new PopupMenu.PopupMenuItem(_('Suspend'));
-        item.connect('activate', () => {
-            this.menu.itemActivated(BoxPointer.PopupAnimation.NONE);
-            this._systemActions.activateSuspend();
-        });
-        this._sessionSubMenu.menu.addMenuItem(item);
-        this._suspendItem = item;
-        this._systemActions.bind_property('can-suspend',
-            this._suspendItem, 'visible',
-            bindFlags);
-
-        item = new PopupMenu.PopupMenuItem(_('Restart…'));
-        item.connect('activate', () => {
-            this.menu.itemActivated(BoxPointer.PopupAnimation.NONE);
-            this._systemActions.activateRestart();
-        });
-        this._sessionSubMenu.menu.addMenuItem(item);
-        this._restartItem = item;
-        this._systemActions.bind_property('can-restart',
-            this._restartItem, 'visible',
-            bindFlags);
-
-        item = new PopupMenu.PopupMenuItem(_('Power Off…'));
-        item.connect('activate', () => {
-            this.menu.itemActivated(BoxPointer.PopupAnimation.NONE);
-            this._systemActions.activatePowerOff();
-        });
-        this._sessionSubMenu.menu.addMenuItem(item);
-        this._powerOffItem = item;
-        this._systemActions.bind_property('can-power-off',
-            this._powerOffItem, 'visible',
-            bindFlags);
-
-        this._sessionSubMenu.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-
-        item = new PopupMenu.PopupMenuItem(_('Log Out'));
-        item.connect('activate', () => {
-            this.menu.itemActivated(BoxPointer.PopupAnimation.NONE);
-            this._systemActions.activateLogout();
-        });
-        this._sessionSubMenu.menu.addMenuItem(item);
-        this._logoutItem = item;
-        this._systemActions.bind_property('can-logout',
-            this._logoutItem, 'visible',
-            bindFlags);
-
-        item = new PopupMenu.PopupMenuItem(_('Switch User…'));
-        item.connect('activate', () => {
-            this.menu.itemActivated(BoxPointer.PopupAnimation.NONE);
-            this._systemActions.activateSwitchUser();
-        });
-        this._sessionSubMenu.menu.addMenuItem(item);
-        this._loginScreenItem = item;
-        this._systemActions.bind_property('can-switch-user',
-            this._loginScreenItem, 'visible',
-            bindFlags);
-        //this.menu.addMenuItem(this._sessionSubMenu);
-        
     }
     
     
@@ -334,10 +173,19 @@ class ActivitiesMenuButton extends PanelMenu.Button {
             });
 
             this._create(id);
-            this.smitemplaces.menu.addMenuItem(this._sections[id]);
-            this.smitemplaces.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-            //this.menu.addMenuItem(this._sections[id]);
-            //this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+            
+            if (id === SECTIONS[i]) {
+            this.menu.addMenuItem(this._sections[id]);
+            this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+            }
+            else if (id === SECTIONS2[i]) {
+            this.smitembookmarks.menu.addMenuItem(this._sections[id]);
+            this.smitembookmarks.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+            }
+            else if (id === SECTIONS3[i]) {
+            this.smitemdrives.menu.addMenuItem(this._sections[id]);
+            this.smitemdrives.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+            }
         }
     }
     
@@ -353,6 +201,7 @@ class ActivitiesMenuButton extends PanelMenu.Button {
             this._sections[id].addMenuItem(new PlaceMenuItem(places[i]));
 
         this._sections[id].actor.visible = places.length > 0;
+        this.smitembookmarks.actor.visible = places.length > 0;
     }
     
     menu_build() {
@@ -361,20 +210,6 @@ class ActivitiesMenuButton extends PanelMenu.Button {
         itemsearch.connect('activate', () => {
         if (Main.overview.shouldToggleByCornerOrButton())
             Main.overview.toggle();
-        });
-        
-        let item2 = new PopupMenu.PopupImageMenuItem(_('Apps'), 'view-app-grid-symbolic');
-        item2.connect('activate', () => {
-            if (Main.overview.dash.showAppsButton.checked) {
-                if (Main.overview.shouldToggleByCornerOrButton())
-                    Main.overview.dash.showAppsButton.checked = false;
-            }
-            else {
-                if (Main.overview.shouldToggleByCornerOrButton()) {
-                    Main.overview.show();
-                    Main.overview.dash.showAppsButton.checked = true;
-                    }
-            }
         });
         
         let itemapps = new PopupMenu.PopupImageMenuItem(_('Apps'), 'org.gnome.Settings-applications-symbolic');
@@ -441,28 +276,28 @@ class ActivitiesMenuButton extends PanelMenu.Button {
             Gio.AppInfo.launch_default_for_uri_async(downloadFile.get_uri(), global.create_app_launch_context(0, -1), null);
         });
         
-        this.smitemplaces = new PopupMenu.PopupSubMenuMenuItem(_('Places'), true, {});
-        this.smitemplaces.icon.icon_name = 'folder-symbolic';
+        this.smitembookmarks = new PopupMenu.PopupSubMenuMenuItem(_('Bookmarks'), true, {});
+        this.smitembookmarks.icon.icon_name = 'folder-symbolic';
         
-               
+        this.smitemdrives = new PopupMenu.PopupSubMenuMenuItem(_('Drives'), true, {});
+        this.smitemdrives.icon.icon_name = 'folder-symbolic';
         
-        
-        //this.menu.addMenuItem(itemsearch);
+        this.menu.addMenuItem(itemsearch);
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        //this.menu.addMenuItem(itemapps);
+        this.PlaceMenu(SECTIONS);
+        this.menu.addMenuItem(this.smitembookmarks);        
+        this.PlaceMenu(SECTIONS2);
+        this.menu.addMenuItem(this.smitemdrives);        
+        this.PlaceMenu(SECTIONS3);
+        //this.menu.addMenuItem(itemr);
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());        
+        this.menu.addMenuItem(itemsettings);
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        //this.menu.addMenuItem(itemhelp);
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         this.menu.addMenuItem(itemusers);
-        this.menu.addMenuItem(this._sessionSubMenu);
-        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        this.menu.addMenuItem(itemapps);
-        //this.menu.addMenuItem(this.smitemplaces);
-        //this.PlaceMenu(SECTIONS);
-        //this.PlaceMenu(SECTIONS2);
-        this.menu.addMenuItem(itemr);
-        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());        
-        this.menu.addMenuItem(itemsettings);        
-        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());        
-        this.menu.addMenuItem(itemhelp); 
-        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        this.menu.addMenuItem(itemabout);
+        this.menu.addMenuItem(itemabout);                
     }
 
     handleDragOver(source, _actor, _x, _y, _time) {
@@ -484,11 +319,9 @@ class ActivitiesMenuButton extends PanelMenu.Button {
             event.type() === Clutter.EventType.BUTTON_RELEASE) {
             if (Main.overview.shouldToggleByCornerOrButton())
                 this.menu.toggle();
-                //Main.overview.toggle();
         }
 
-        //return Main.wm.handleWorkspaceScroll(event);
-        return Clutter.EVENT_PROPAGATE;
+        return Main.wm.handleWorkspaceScroll(event);
     }
 
     vfunc_key_release_event(event) {
@@ -496,7 +329,6 @@ class ActivitiesMenuButton extends PanelMenu.Button {
         if (symbol === Clutter.KEY_Return || symbol === Clutter.KEY_space) {
             if (Main.overview.shouldToggleByCornerOrButton()) {
                 this.menu.toggle();
-                //Main.overview.toggle();
                 return Clutter.EVENT_STOP;
             }
         }
@@ -516,7 +348,7 @@ class ActivitiesMenuButton extends PanelMenu.Button {
         return GLib.SOURCE_REMOVE;
     }
     
-    destroy() {
+    _onDestroy() {
         if (this._showingSignal) {
             Main.overview.disconnect(this._showingSignal);
             this._showingSignal = null;
@@ -532,7 +364,7 @@ class ActivitiesMenuButton extends PanelMenu.Button {
             this._xdndTimeOut = null;
         }
         
-        //this.placesManager.destroy();
+        this.placesManager.destroy();
         
         super.destroy();
     }
