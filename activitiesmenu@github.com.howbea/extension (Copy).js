@@ -35,50 +35,71 @@ import * as Util from 'resource:///org/gnome/shell/misc/util.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as SystemActions from 'resource:///org/gnome/shell/misc/systemActions.js';
 import * as BoxPointer from 'resource:///org/gnome/shell/ui/boxpointer.js';
-import * as osdWindow from './osdWindow.js';
 
 Gio._promisify(Gio.AppInfo, 'launch_default_for_uri_async');
 
+import {PlacesManager} from './placeDisplay.js';
+const N_ = x => x;
 
 
-var AggregateLayout = GObject.registerClass(
-class AggregateLayout extends Clutter.BoxLayout {
-    _init(params = {}) {
-        params['orientation'] = Clutter.Orientation.VERTICAL;
-        super._init(params);
-
-        this._sizeChildren = [];
+class PlaceMenuItem extends PopupMenu.PopupImageMenuItem {
+    static {
+        GObject.registerClass(this);
     }
 
-    addSizeChild(actor) {
-        this._sizeChildren.push(actor);
-        this.layout_changed();
-    }
+    constructor(info) {
+        super(info.name, info.icon, {
+            style_class: 'place-menu-item',
+        });
+        this._info = info;
 
-    vfunc_get_preferred_width(container, forHeight) {
-        let themeNode = container.get_theme_node();
-        let minWidth = themeNode.get_min_width();
-        let natWidth = minWidth;
-
-        for (let i = 0; i < this._sizeChildren.length; i++) {
-            let child = this._sizeChildren[i];
-            let [childMin, childNat] = child.get_preferred_width(forHeight);
-            minWidth = Math.max(minWidth, childMin);
-            natWidth = Math.max(natWidth, childNat);
+        if (info.isRemovable()) {
+            this._ejectIcon = new St.Icon({
+                icon_name: 'media-eject-symbolic',
+                style_class: 'popup-menu-icon',
+            });
+            this._ejectButton = new St.Button({
+                child: this._ejectIcon,
+                style_class: 'button',
+            });
+            this._ejectButton.connect('clicked', info.eject.bind(info));
+            this.add_child(this._ejectButton);
         }
-        return [minWidth, natWidth];
+
+        info.connectObject('changed',
+            this._propertiesChanged.bind(this), this);
     }
-});
+
+    activate(event) {
+        this._info.launch(event.get_time());
+
+        super.activate(event);
+    }
+
+    _propertiesChanged(info) {
+        this.setIcon(info.icon);
+        this.label.text = info.name;
+    }
+}
+
+const SECTIONS = [
+    'special',
+    'bookmarks',
+    'devices',
+    'network',
+];
+
+const SECTIONS2 = [
+    //'special',
+    //'bookmarks',
+    'devices',
+    'network',
+];
 
 const ActivitiesMenuButton = GObject.registerClass(
 class ActivitiesMenuButton extends PanelMenu.Button {
     _init() {
         super._init(0.5, null);
-        
-        this.menu.actor.add_style_class_name('aggregate-menu');
-
-        let menuLayout = new AggregateLayout();
-        this.menu.box.set_layout_manager(menuLayout);
 
         this.set({
             name: 'panelActivitiesMenu',
@@ -100,14 +121,14 @@ class ActivitiesMenuButton extends PanelMenu.Button {
         this._container.add_child(this._iconBox);        
           
         this._label = new St.Label({
-            text: _('debian'),
+            text: _('GNOME'),
             y_align: Clutter.ActorAlign.CENTER,
             style_class: 'activities-label',
         });        
         //this._container.add_child(this._label);
         
         const icon = new St.Icon({
-            icon_name: 'debian-logo-symbolic',
+            icon_name: 'start-here',
             style_class: 'activities-icon',
         });
         this._iconBox.set_child(icon);
@@ -143,10 +164,10 @@ class ActivitiesMenuButton extends PanelMenu.Button {
         Main.sessionMode.connect('updated', this._sessionUpdated.bind(this));
         this._sessionUpdated();
         
-        this.smappsitem = new PopupMenu.PopupSubMenuMenuItem(_('Items'), true ,{style_class: 'smapps-item'});
-        this.smappsitem.icon.icon_name = 'document-open-recent-symbolic';
+        
+        
 
-        this._showingSignal = Main.overview.connect('showing', () => {
+        /*this._showingSignal = Main.overview.connect('showing', () => {
             this.add_style_pseudo_class('checked');
             this.add_accessible_state(Atk.StateType.CHECKED);
         });        
@@ -154,19 +175,25 @@ class ActivitiesMenuButton extends PanelMenu.Button {
         this._hidingSignal = Main.overview.connect('hiding', () => {
             this.remove_style_pseudo_class('checked');
             this.remove_accessible_state(Atk.StateType.CHECKED);
-        });
+        });*/
 
         this._xdndTimeOut = 0;
         
-        //this._osdWindow = new osdWindow.OsdWindow(Main.layoutManager.monitors.length);
+        this._systemActions = new SystemActions.getDefault();
         
         this.menu_build();
-        this.smappsitem.menu.connect('open-state-changed', (menu, open) => {
+        /*this.menu.connect('open-state-changed', (menu, open) => {
             if (open) {
-                this.smappsitem.menu.removeAll();
-                this.submenubuild();
+                this.menu.removeAll();
+                this.menu_build();
                 }
-        });  
+        });  */ 
+        
+        global.settings.connect("changed",
+					() => {
+					    this.menu.removeAll();
+					    this.menu_build();
+					});
     }
     
         
@@ -240,49 +267,9 @@ class ActivitiesMenuButton extends PanelMenu.Button {
             bindFlags);
 
         this._sessionSubMenu = new PopupMenu.PopupSubMenuMenuItem(
-            _('Power Off'), true, {});
+            _('Power'), true);
         this._sessionSubMenu.icon.icon_name = 'system-shutdown-symbolic';
 
-        var userManager = AccountsService.UserManager.get_default();
-        var user = userManager.get_user(GLib.get_user_name());
-        this._userWidget = new userWidget.UserWidget(user);
-        this.box = new St.BoxLayout({
-            //x_expand: true,
-            y_expand: true,
-            vertical: true,
-            //x_align: Clutter.ActorAlign.CENTER,
-            y_align: Clutter.ActorAlign.CENTER
-            });
-        //this.box.insert_child_at_index(new userWidget.UserWidget(user, Clutter.Orientation.VERTICAL), 0);
-        this.box.add_child(new userWidget.UserWidget(user));
-        this.menu.box.add_child(this.box);            
-            
-        item = new PopupMenu.PopupMenuItem(_('Log Out…'));
-        item.connect('activate', () => {
-            this.menu.itemActivated(BoxPointer.PopupAnimation.NONE);
-            this._systemActions.activateLogout();
-        });
-        this._sessionSubMenu.menu.addMenuItem(item);
-        //this.menu.addMenuItem(item);
-        this._logoutItem = item;
-        this._systemActions.bind_property('can-logout',
-            this._logoutItem, 'visible',
-            bindFlags);
-
-        item = new PopupMenu.PopupMenuItem(_('Switch User…'));
-        item.connect('activate', () => {
-            this.menu.itemActivated(BoxPointer.PopupAnimation.NONE);
-            this._systemActions.activateSwitchUser();
-        });
-        this._sessionSubMenu.menu.addMenuItem(item);
-        //this.menu.addMenuItem(item);
-        this._loginScreenItem = item;
-        this._systemActions.bind_property('can-switch-user',
-            this._loginScreenItem, 'visible',
-            bindFlags);
-        
-        this._sessionSubMenu.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-            
         item = new PopupMenu.PopupMenuItem(_('Suspend'));
         item.connect('activate', () => {
             this.menu.itemActivated(BoxPointer.PopupAnimation.NONE);
@@ -305,7 +292,7 @@ class ActivitiesMenuButton extends PanelMenu.Button {
             this._restartItem, 'visible',
             bindFlags);
 
-        item = new PopupMenu.PopupMenuItem(_('Power Off'));
+        item = new PopupMenu.PopupMenuItem(_('Power Off…'));
         item.connect('activate', () => {
             this.menu.itemActivated(BoxPointer.PopupAnimation.NONE);
             this._systemActions.activatePowerOff();
@@ -316,202 +303,109 @@ class ActivitiesMenuButton extends PanelMenu.Button {
             this._powerOffItem, 'visible',
             bindFlags);
             
-        this._sessionSubMenu.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        
-        let aboutapp = this._settingsAboutApp = Shell.AppSystem.get_default().lookup_app(
-            'gnome-about-panel.desktop');
-        if (aboutapp) {
-            const [icon] = aboutapp.app_info.get_icon().names;
-            const name = aboutapp.app_info.get_name();
-            item = new PopupMenu.PopupMenuItem(name);
-            item.connect('activate', () => {
-                this.menu.itemActivated(BoxPointer.PopupAnimation.NONE);
-                Main.overview.hide();
-                this._settingsAboutApp.activate();
-            });
-            this._sessionSubMenu.menu.addMenuItem(item);
-            this._settingsAboutItem = item;
-        } else {
-            log('Missing required core component Settings, expect trouble…');
-            this._settingsAboutItem = new St.Widget();
-        }
+        var userManager = AccountsService.UserManager.get_default();
+        var user = userManager.get_user(GLib.get_user_name());
+        let itemaaa = new PopupMenu.PopupSeparatorMenuItem('');   
+        this._sessionSubMenu.menu.addMenuItem(itemaaa);
+        itemaaa.add_child(new userWidget.UserWidget(user)._label);
             
+        //var userManager = AccountsService.UserManager.get_default();
+        //var user = userManager.get_user(GLib.get_user_name());
+        let item6 = new PopupMenu.PopupBaseMenuItem();
+        item6.insert_child_at_index(new userWidget.UserWidget(user), 0);
+        item6.connect('activate', () => {
+        Shell.AppSystem.get_default().lookup_app('gnome-users-panel.desktop').activate();
+        });
+        //this._sessionSubMenu.menu.addMenuItem(item6);
         
+        let itemusers = new PopupMenu.PopupImageMenuItem(_('Users'), 'org.gnome.Settings-users-symbolic');
+        itemusers.connect('activate', () => {
+        Shell.AppSystem.get_default().lookup_app('gnome-users-panel.desktop').activate();
+        });
+        //this._sessionSubMenu.menu.addMenuItem(itemusers);
+        //this.menu.addMenuItem(itemusers);
+
+        item = new PopupMenu.PopupMenuItem(_('Log Out'));
+        item.connect('activate', () => {
+            this.menu.itemActivated(BoxPointer.PopupAnimation.NONE);
+            this._systemActions.activateLogout();
+        });
+        this._sessionSubMenu.menu.addMenuItem(item);
+        //this.menu.addMenuItem(item);
+        this._logoutItem = item;
+        this._systemActions.bind_property('can-logout',
+            this._logoutItem, 'visible',
+            bindFlags);
+
+        item = new PopupMenu.PopupMenuItem(_('Switch User…'));
+        item.connect('activate', () => {
+            this.menu.itemActivated(BoxPointer.PopupAnimation.NONE);
+            this._systemActions.activateSwitchUser();
+        });
+        this._sessionSubMenu.menu.addMenuItem(item);
+        //this.menu.addMenuItem(item);
+        this._loginScreenItem = item;
+        this._systemActions.bind_property('can-switch-user',
+            this._loginScreenItem, 'visible',
+            bindFlags);
 
         //this.menu.addMenuItem(this._sessionSubMenu);
     }
     
+    
+    PlaceMenu(secs) {    
+        this.placesManager = new PlacesManager();
+
+        this._sections = { };
+
+        for (let i = 0; i < secs.length; i++) {
+            let id = secs[i];
+            this._sections[id] = new PopupMenu.PopupMenuSection();
+            this.placesManager.connect(`${id}-updated`, () => {
+                this._redisplay(id);
+            });
+
+            this._create(id);
+            this.smitemplaces.menu.addMenuItem(this._sections[id]);
+            this.smitemplaces.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+            //this.menu.addMenuItem(this._sections[id]);
+            //this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        }
+    }
+    
+    _redisplay(id) {
+        this._sections[id].removeAll();
+        this._create(id);
+    }
+
+    _create(id) {
+        let places = this.placesManager.get(id);
+
+        for (let i = 0; i < places.length; i++)
+            this._sections[id].addMenuItem(new PlaceMenuItem(places[i]));
+
+        this._sections[id].actor.visible = places.length > 0;
+    }
+    
     add_item(app) {
-        const space_widget = new St.Widget({style_class: 'space-widget'});
-        let item = new PopupMenu.PopupMenuItem('', {style_class: 'items-item'}); //BaseMenuItem;
+        let item = new PopupMenu.PopupBaseMenuItem;
         this.smappsitem.menu.addMenuItem(item);
-        //let box = new St.BoxLayout({vertical: false, style_class: 'items-box'});
-        //item.actor.add_child(box);
+        let box = new St.BoxLayout({vertical: false, style_class: 'panel-apps-favorites-box'});
+        item.actor.add_child(box);
         let icon = app.create_icon_texture(22);
-        item.insert_child_at_index(icon, 0);
-        item.insert_child_at_index(space_widget, 0);
-        //box.add_child(icon);
+        box.add_child(icon);
         let label = new St.Label({text: app.get_name(),
                                   y_align: Clutter.ActorAlign.CENTER,});
-        //box.add_child(label);
-        item.label.text = app.get_name();
-        
+        box.add_child(label);
         item.connect("activate", () => {
             app.open_new_window(-1);
             //Main.overview.hide();
             });
     }
     
-    submenubuild() {
-    const space_widget = new St.Widget({style_class: 'space-widget'});
-    let count = 0;
-        Shell.AppUsage.get_default().get_most_used().forEach((app) => {
-            if (count < 4) {
-            this.add_item(app);
-            count++;
-            }
-        });
-        
-        const separator = new PopupMenu.PopupSeparatorMenuItem('');
-        
-        //separator.insert_child_at_index(space_widget, 0);
-        
-        this.smappsitem.menu.addMenuItem(separator);
-        
-        const MAX_ITEMS = 4; //this._settings.get_int('max-items'); // ← gsettings から取得
-
-    const bookmark = new GLib.BookmarkFile();
-    const xbelPath = GLib.build_filenamev([
-        GLib.get_home_dir(),
-        '.local/share/recently-used.xbel'
-    ]);
-
-    try {
-        bookmark.load_from_file(xbelPath);
-
-        const items = bookmark.get_uris();
-
-        if (items.length === 0) {
-            this._indicator.menu.addMenuItem(
-                new PopupMenu.PopupMenuItem("No recent files", { reactive: false, style_class: 'items-item'})
-            );
-            return;
-        }
-
-        // 最新順に並び替え
-        const sorted = items.sort((a, b) => {
-            const ta = bookmark.get_modified(a);
-            const tb = bookmark.get_modified(b);
-            return tb - ta;
-        });
-
-        // ★ 表示用に最大 MAX_ITEMS 件集める
-        const filteredItems = [];
-
-        for (const uri of sorted) {
-            if (filteredItems.length >= MAX_ITEMS)
-                break;
-
-            const file = Gio.File.new_for_uri(uri);
-
-            // 1) ファイルがない → スキップ
-            if (!file.query_exists(null)) {
-                continue;
-            }
-
-            // 2) ディレクトリ → スキップ
-            const infoBasic = file.query_info(
-                'standard::type',
-                Gio.FileQueryInfoFlags.NONE,
-                null
-            );
-            if (infoBasic.get_file_type() === Gio.FileType.DIRECTORY) {
-                continue;
-            }
-
-            filteredItems.push(uri);
-        }
-
-        // ★ 表示
-        if (filteredItems.length === 0) {
-            this._indicator.menu.addMenuItem(
-                new PopupMenu.PopupMenuItem("No recent files", { reactive: false, style_class: 'items-item'})
-            );
-            return;
-        }
-
-        for (const uri of filteredItems) {
-            const file = Gio.File.new_for_uri(uri);
-
-            const info = file.query_info(
-                'standard::icon,standard::display-name',
-                Gio.FileQueryInfoFlags.NONE,
-                null
-            );
-
-            const gicon = info.get_icon();
-            const displayName = info.get_display_name();
-
-            const item = new PopupMenu.PopupMenuItem('', {style_class: 'items-item'});
-
-            const icon = new St.Icon({
-                gicon,
-                icon_size: 22,
-                //style_class: 'popup-menu-icon'
-            });
-            
-            const space_widget = new St.Widget({style_class: 'space-widget'});
-            item.insert_child_at_index(icon, 0);
-            item.insert_child_at_index(space_widget, 0);
-            item.label.text = displayName;            
-
-            item.connect('activate', () => {
-
-    // ★ XBEL のパス
-    const xbelPath = GLib.build_filenamev([
-        GLib.get_home_dir(),
-        '.local/share/recently-used.xbel'
-    ]);
-
-    try {
-        const bookmark2 = new GLib.BookmarkFile();
-        bookmark2.load_from_file(xbelPath);
-
-        // ★ now を UNIX タイムスタンプ（秒）で取得
-        //const now = Math.floor(Date.now() / 1000);
-
-        // ★ タイムスタンプ更新
-        //bookmark2.set_modified(uri, now);
-
-        // ★ 保存
-        //bookmark2.to_file(xbelPath);
-
-    } catch (e) {
-        log(`XBEL update error: ${e}`);
-    }
-
-    // ★ 最後にファイルを開く
-    Gio.AppInfo.launch_default_for_uri(uri, null);
-});
-            
-            this.smappsitem.menu.addMenuItem(item);
-        }
-
-    } catch (e) {
-        //this.smappsitem._indicator.menu.addMenuItem(
-        this.smappsitem.menu.addMenuItem(
-            new PopupMenu.PopupMenuItem(`Error: ${e}`, { reactive: false })
-        );
-    }
-    
-    }
-    
     menu_build() {
-        let bindFlags = GObject.BindingFlags.DEFAULT | GObject.BindingFlags.SYNC_CREATE;
-        let iteml;
     
-    
-        let itemsearch = new PopupMenu.PopupImageMenuItem(_('Search'), 'org.gnome.Settings-search-symbolic', {style_class: 'activities-menu-item'});
+        let itemsearch = new PopupMenu.PopupImageMenuItem(_('Search'), 'org.gnome.Settings-search-symbolic', {style_class: 'activities-menu'});
         itemsearch.connect('activate', () => {
         if (Main.overview.shouldToggleByCornerOrButton())
             Main.overview.toggle();
@@ -536,18 +430,20 @@ class ActivitiesMenuButton extends PanelMenu.Button {
         Shell.AppSystem.get_default().lookup_app('gnome-applications-panel.desktop').activate();
         });
         
-        this.submenubuild();
+        this.smappsitem = new PopupMenu.PopupSubMenuMenuItem(_('Apps'), true);
+        this.smappsitem.icon.icon_name = 'org.gnome.Settings-applications-symbolic';
         
+        let count = 0;
+        Shell.AppUsage.get_default().get_most_used().forEach((app) => {
+            if (count < 5) {
+            this.add_item(app);
+            count++;
+            }
+        });
         
         let itemsettings = new PopupMenu.PopupImageMenuItem(_('Settings'), 'org.gnome.Settings-system-symbolic');
         itemsettings.connect('activate', () => {
-        Shell.AppSystem.get_default().lookup_app('org.gnome.Settings.desktop').activate();
-        });
-        
-        let itemsoftware = new PopupMenu.PopupImageMenuItem(_('Software'), 'org.gnome.Software-symbolic');
-        itemsoftware.connect('activate', () => {
-        Shell.AppSystem.get_default().lookup_app('org.gnome.Software.desktop').activate();
-        //Util.spawn(['gnome-software', '--mode=updates']);
+        Shell.AppSystem.get_default().lookup_app('gnome-system-panel.desktop').activate();
         });
         
         let itemusers = new PopupMenu.PopupImageMenuItem(_('Users'), 'org.gnome.Settings-users-symbolic');
@@ -577,12 +473,7 @@ class ActivitiesMenuButton extends PanelMenu.Button {
             Gio.AppInfo.launch_default_for_uri_async(homeFile.get_uri(), global.create_app_launch_context(0, -1), null);
         });
         
-        /*let itemr = new PopupMenu.PopupImageMenuItem(_('Recent'), 'document-open-recent-symbolic');
-        itemr.connect('activate', () => {
-            Gio.AppInfo.launch_default_for_uri_async('recent:///', global.create_app_launch_context(0, -1), null);
-        });*/
-
-        let itemr = new PopupMenu.PopupImageMenuItem(_('Files'), 'x-office-document');
+        let itemr = new PopupMenu.PopupImageMenuItem(_('Recent'), 'document-open-recent-symbolic');
         itemr.connect('activate', () => {
             Gio.AppInfo.launch_default_for_uri_async('recent:///', global.create_app_launch_context(0, -1), null);
         });
@@ -609,30 +500,26 @@ class ActivitiesMenuButton extends PanelMenu.Button {
             Gio.AppInfo.launch_default_for_uri_async(downloadFile.get_uri(), global.create_app_launch_context(0, -1), null);
         });
         
-        iteml = new PopupMenu.PopupImageMenuItem(_('Lock'), 'changes-prevent-symbolic');
-        iteml.connect('activate', () => {
-            this.menu.itemActivated(BoxPointer.PopupAnimation.NONE);
-            this._systemActions.activateLockScreen();
-        });
-        //this.menu.addMenuItem(iteml);
-        this._lockScreenItem = iteml;
-        this._systemActions.bind_property('can-lock-screen',
-            this._lockScreenItem, 'visible',
-            bindFlags);
+        this.smitemplaces = new PopupMenu.PopupSubMenuMenuItem(_('Places'), true, {});
+        this.smitemplaces.icon.icon_name = 'folder-symbolic';
         
         this.menu.addMenuItem(itemsearch);
-        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());                 
+        //this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        //this.menu.addMenuItem(itemusers);
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());         
         this.menu.addMenuItem(this.smappsitem);
+        //this.menu.addMenuItem(this.smitemplaces);
+        //this.PlaceMenu(SECTIONS);
+        //this.PlaceMenu(SECTIONS2);
+        this.menu.addMenuItem(itemr);
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         this.menu.addMenuItem(itemsettings);
-        this.menu.addMenuItem(itemsoftware);
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        this.menu.addMenuItem(itemhelp);
+        //this.menu.addMenuItem(this._sessionSubMenu);
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        this.menu.addMenuItem(itemhelp); 
         //this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        //this.menu.addMenuItem(itemabout);
-        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        this.menu.addMenuItem(iteml);
-        this.menu.addMenuItem(this._sessionSubMenu);
+        this.menu.addMenuItem(itemabout);               
     }
 
     handleDragOver(source, _actor, _x, _y, _time) {
@@ -655,15 +542,10 @@ class ActivitiesMenuButton extends PanelMenu.Button {
             if (Main.overview.shouldToggleByCornerOrButton())
                 this.menu.toggle();
                 //Main.overview.toggle();
-                //return Clutter.EVENT_PROPAGATE;
         }
-        /*if (event.type() === Clutter.EventType.SCROLL) {
-            this._osdWindowManager._showOsdWindow(monitorIndex);
-            return Clutter.EVENT_PROPAGATE;
-            }*/
 
-        return Main.wm.handleWorkspaceScroll(event);
-        //return Clutter.EVENT_PROPAGATE;
+        //return Main.wm.handleWorkspaceScroll(event);
+        return Clutter.EVENT_PROPAGATE;
     }
 
     vfunc_key_release_event(event) {

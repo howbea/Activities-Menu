@@ -39,7 +39,63 @@ import * as osdWindow from './osdWindow.js';
 
 Gio._promisify(Gio.AppInfo, 'launch_default_for_uri_async');
 
+import {PlacesManager} from './placeDisplay.js';
+const N_ = x => x;
 
+
+class PlaceMenuItem extends PopupMenu.PopupImageMenuItem {
+    static {
+        GObject.registerClass(this);
+    }
+
+    constructor(info) {
+        super(info.name, info.icon, {
+            style_class: 'place-menu-item',
+        });
+        this._info = info;
+
+        if (info.isRemovable()) {
+            this._ejectIcon = new St.Icon({
+                icon_name: 'media-eject-symbolic',
+                style_class: 'popup-menu-icon',
+            });
+            this._ejectButton = new St.Button({
+                child: this._ejectIcon,
+                style_class: 'button',
+            });
+            this._ejectButton.connect('clicked', info.eject.bind(info));
+            this.add_child(this._ejectButton);
+        }
+
+        info.connectObject('changed',
+            this._propertiesChanged.bind(this), this);
+    }
+
+    activate(event) {
+        this._info.launch(event.get_time());
+
+        super.activate(event);
+    }
+
+    _propertiesChanged(info) {
+        this.setIcon(info.icon);
+        this.label.text = info.name;
+    }
+}
+
+const SECTIONS = [
+    'special',
+    'bookmarks',
+    'devices',
+    'network',
+];
+
+const SECTIONS2 = [
+    //'special',
+    //'bookmarks',
+    'devices',
+    'network',
+];
 
 var AggregateLayout = GObject.registerClass(
 class AggregateLayout extends Clutter.BoxLayout {
@@ -143,7 +199,7 @@ class ActivitiesMenuButton extends PanelMenu.Button {
         Main.sessionMode.connect('updated', this._sessionUpdated.bind(this));
         this._sessionUpdated();
         
-        this.smappsitem = new PopupMenu.PopupSubMenuMenuItem(_('Items'), true ,{style_class: 'smapps-item'});
+        this.smappsitem = new PopupMenu.PopupSubMenuMenuItem(_('Items'), true);
         this.smappsitem.icon.icon_name = 'document-open-recent-symbolic';
 
         this._showingSignal = Main.overview.connect('showing', () => {
@@ -161,12 +217,12 @@ class ActivitiesMenuButton extends PanelMenu.Button {
         //this._osdWindow = new osdWindow.OsdWindow(Main.layoutManager.monitors.length);
         
         this.menu_build();
-        this.smappsitem.menu.connect('open-state-changed', (menu, open) => {
+        /*this.menu.connect('open-state-changed', (menu, open) => {
             if (open) {
-                this.smappsitem.menu.removeAll();
-                this.submenubuild();
+                this.menu.removeAll();
+                this.menu_build();
                 }
-        });  
+        });*/   
     }
     
         
@@ -228,7 +284,7 @@ class ActivitiesMenuButton extends PanelMenu.Button {
             this._settingsItem = new St.Widget();
         }
 
-        item = new PopupMenu.PopupImageMenuItem(_('Lock'), 'changes-prevent-symbolic');
+        /*item = new PopupMenu.PopupImageMenuItem(_('Lock'), 'changes-prevent-symbolic');
         item.connect('activate', () => {
             this.menu.itemActivated(BoxPointer.PopupAnimation.NONE);
             this._systemActions.activateLockScreen();
@@ -237,10 +293,10 @@ class ActivitiesMenuButton extends PanelMenu.Button {
         this._lockScreenItem = item;
         this._systemActions.bind_property('can-lock-screen',
             this._lockScreenItem, 'visible',
-            bindFlags);
+            bindFlags);*/
 
         this._sessionSubMenu = new PopupMenu.PopupSubMenuMenuItem(
-            _('Power Off'), true, {});
+            _('Power Off / Log Out...'), true, {});
         this._sessionSubMenu.icon.icon_name = 'system-shutdown-symbolic';
 
         var userManager = AccountsService.UserManager.get_default();
@@ -255,33 +311,8 @@ class ActivitiesMenuButton extends PanelMenu.Button {
             });
         //this.box.insert_child_at_index(new userWidget.UserWidget(user, Clutter.Orientation.VERTICAL), 0);
         this.box.add_child(new userWidget.UserWidget(user));
-        this.menu.box.add_child(this.box);            
-            
-        item = new PopupMenu.PopupMenuItem(_('Log Out…'));
-        item.connect('activate', () => {
-            this.menu.itemActivated(BoxPointer.PopupAnimation.NONE);
-            this._systemActions.activateLogout();
-        });
-        this._sessionSubMenu.menu.addMenuItem(item);
-        //this.menu.addMenuItem(item);
-        this._logoutItem = item;
-        this._systemActions.bind_property('can-logout',
-            this._logoutItem, 'visible',
-            bindFlags);
+        this.menu.box.add_child(this.box);    
 
-        item = new PopupMenu.PopupMenuItem(_('Switch User…'));
-        item.connect('activate', () => {
-            this.menu.itemActivated(BoxPointer.PopupAnimation.NONE);
-            this._systemActions.activateSwitchUser();
-        });
-        this._sessionSubMenu.menu.addMenuItem(item);
-        //this.menu.addMenuItem(item);
-        this._loginScreenItem = item;
-        this._systemActions.bind_property('can-switch-user',
-            this._loginScreenItem, 'visible',
-            bindFlags);
-        
-        this._sessionSubMenu.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
             
         item = new PopupMenu.PopupMenuItem(_('Suspend'));
         item.connect('activate', () => {
@@ -305,7 +336,7 @@ class ActivitiesMenuButton extends PanelMenu.Button {
             this._restartItem, 'visible',
             bindFlags);
 
-        item = new PopupMenu.PopupMenuItem(_('Power Off'));
+        item = new PopupMenu.PopupMenuItem(_('Power Off…'));
         item.connect('activate', () => {
             this.menu.itemActivated(BoxPointer.PopupAnimation.NONE);
             this._systemActions.activatePowerOff();
@@ -317,39 +348,78 @@ class ActivitiesMenuButton extends PanelMenu.Button {
             bindFlags);
             
         this._sessionSubMenu.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        
-        let aboutapp = this._settingsAboutApp = Shell.AppSystem.get_default().lookup_app(
-            'gnome-about-panel.desktop');
-        if (aboutapp) {
-            const [icon] = aboutapp.app_info.get_icon().names;
-            const name = aboutapp.app_info.get_name();
-            item = new PopupMenu.PopupMenuItem(name);
-            item.connect('activate', () => {
-                this.menu.itemActivated(BoxPointer.PopupAnimation.NONE);
-                Main.overview.hide();
-                this._settingsAboutApp.activate();
-            });
-            this._sessionSubMenu.menu.addMenuItem(item);
-            this._settingsAboutItem = item;
-        } else {
-            log('Missing required core component Settings, expect trouble…');
-            this._settingsAboutItem = new St.Widget();
-        }
+            
+        item = new PopupMenu.PopupMenuItem(_('Log Out...'));
+        item.connect('activate', () => {
+            this.menu.itemActivated(BoxPointer.PopupAnimation.NONE);
+            this._systemActions.activateLogout();
+        });
+        this._sessionSubMenu.menu.addMenuItem(item);
+        //this.menu.addMenuItem(item);
+        this._logoutItem = item;
+        this._systemActions.bind_property('can-logout',
+            this._logoutItem, 'visible',
+            bindFlags);
+
+        item = new PopupMenu.PopupMenuItem(_('Switch User…'));
+        item.connect('activate', () => {
+            this.menu.itemActivated(BoxPointer.PopupAnimation.NONE);
+            this._systemActions.activateSwitchUser();
+        });
+        this._sessionSubMenu.menu.addMenuItem(item);
+        //this.menu.addMenuItem(item);
+        this._loginScreenItem = item;
+        this._systemActions.bind_property('can-switch-user',
+            this._loginScreenItem, 'visible',
+            bindFlags);
             
         
 
         //this.menu.addMenuItem(this._sessionSubMenu);
     }
     
+    
+    PlaceMenu(secs) {    
+        this.placesManager = new PlacesManager();
+
+        this._sections = { };
+
+        for (let i = 0; i < secs.length; i++) {
+            let id = secs[i];
+            this._sections[id] = new PopupMenu.PopupMenuSection();
+            this.placesManager.connect(`${id}-updated`, () => {
+                this._redisplay(id);
+            });
+
+            this._create(id);
+            this.smitemplaces.menu.addMenuItem(this._sections[id]);
+            this.smitemplaces.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+            //this.menu.addMenuItem(this._sections[id]);
+            //this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        }
+    }
+    
+    _redisplay(id) {
+        this._sections[id].removeAll();
+        this._create(id);
+    }
+
+    _create(id) {
+        let places = this.placesManager.get(id);
+
+        for (let i = 0; i < places.length; i++)
+            this._sections[id].addMenuItem(new PlaceMenuItem(places[i]));
+
+        this._sections[id].actor.visible = places.length > 0;
+    }
+    
     add_item(app) {
-        const space_widget = new St.Widget({style_class: 'space-widget'});
         let item = new PopupMenu.PopupMenuItem('', {style_class: 'items-item'}); //BaseMenuItem;
         this.smappsitem.menu.addMenuItem(item);
-        //let box = new St.BoxLayout({vertical: false, style_class: 'items-box'});
-        //item.actor.add_child(box);
+        let box = new St.BoxLayout({vertical: false, style_class: 'panel-apps-favorites-box'});
+        item.actor.add_child(box);
         let icon = app.create_icon_texture(22);
         item.insert_child_at_index(icon, 0);
-        item.insert_child_at_index(space_widget, 0);
         //box.add_child(icon);
         let label = new St.Label({text: app.get_name(),
                                   y_align: Clutter.ActorAlign.CENTER,});
@@ -363,7 +433,6 @@ class ActivitiesMenuButton extends PanelMenu.Button {
     }
     
     submenubuild() {
-    const space_widget = new St.Widget({style_class: 'space-widget'});
     let count = 0;
         Shell.AppUsage.get_default().get_most_used().forEach((app) => {
             if (count < 4) {
@@ -372,11 +441,7 @@ class ActivitiesMenuButton extends PanelMenu.Button {
             }
         });
         
-        const separator = new PopupMenu.PopupSeparatorMenuItem('');
-        
-        //separator.insert_child_at_index(space_widget, 0);
-        
-        this.smappsitem.menu.addMenuItem(separator);
+        this.smappsitem.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem(''));
         
         const MAX_ITEMS = 4; //this._settings.get_int('max-items'); // ← gsettings から取得
 
@@ -459,11 +524,9 @@ class ActivitiesMenuButton extends PanelMenu.Button {
                 icon_size: 22,
                 //style_class: 'popup-menu-icon'
             });
-            
-            const space_widget = new St.Widget({style_class: 'space-widget'});
+
             item.insert_child_at_index(icon, 0);
-            item.insert_child_at_index(space_widget, 0);
-            item.label.text = displayName;            
+            item.label.text = displayName;
 
             item.connect('activate', () => {
 
@@ -478,13 +541,13 @@ class ActivitiesMenuButton extends PanelMenu.Button {
         bookmark2.load_from_file(xbelPath);
 
         // ★ now を UNIX タイムスタンプ（秒）で取得
-        //const now = Math.floor(Date.now() / 1000);
+        const now = Math.floor(Date.now() / 1000);
 
         // ★ タイムスタンプ更新
-        //bookmark2.set_modified(uri, now);
+        bookmark2.set_modified(uri, now);
 
         // ★ 保存
-        //bookmark2.to_file(xbelPath);
+        bookmark2.to_file(xbelPath);
 
     } catch (e) {
         log(`XBEL update error: ${e}`);
@@ -498,8 +561,7 @@ class ActivitiesMenuButton extends PanelMenu.Button {
         }
 
     } catch (e) {
-        //this.smappsitem._indicator.menu.addMenuItem(
-        this.smappsitem.menu.addMenuItem(
+        this.smappsitem._indicator.menu.addMenuItem(
             new PopupMenu.PopupMenuItem(`Error: ${e}`, { reactive: false })
         );
     }
@@ -535,6 +597,11 @@ class ActivitiesMenuButton extends PanelMenu.Button {
         itemapps.connect('activate', () => {
         Shell.AppSystem.get_default().lookup_app('gnome-applications-panel.desktop').activate();
         });
+                
+        //this.smappsitem = new PopupMenu.PopupSubMenuMenuItem(_('Apps'), true);
+        //this.smappsitem.icon.icon_name = 'org.gnome.Settings-applications-symbolic';
+        
+        //this.smappsitem.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem('Apps'));
         
         this.submenubuild();
         
@@ -547,7 +614,6 @@ class ActivitiesMenuButton extends PanelMenu.Button {
         let itemsoftware = new PopupMenu.PopupImageMenuItem(_('Software'), 'org.gnome.Software-symbolic');
         itemsoftware.connect('activate', () => {
         Shell.AppSystem.get_default().lookup_app('org.gnome.Software.desktop').activate();
-        //Util.spawn(['gnome-software', '--mode=updates']);
         });
         
         let itemusers = new PopupMenu.PopupImageMenuItem(_('Users'), 'org.gnome.Settings-users-symbolic');
@@ -620,16 +686,36 @@ class ActivitiesMenuButton extends PanelMenu.Button {
             this._lockScreenItem, 'visible',
             bindFlags);
         
+        this.smitemplaces = new PopupMenu.PopupSubMenuMenuItem(_('Places'), true, {});
+        this.smitemplaces.icon.icon_name = 'folder-symbolic';
+        
         this.menu.addMenuItem(itemsearch);
-        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());                 
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        //this.menu.addMenuItem(itemusers);
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+                 
         this.menu.addMenuItem(this.smappsitem);
+        //this.smappsitem.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        //this.smappsitem.menu.addMenuItem(itemr);
+        //this.menu.addMenuItem(itemapps);
+        //this.menu.addMenuItem(this.smitemplaces);
+        //this.PlaceMenu(SECTIONS);
+        //this.PlaceMenu(SECTIONS2);
+        //this.menu.addMenuItem(itemr);
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         this.menu.addMenuItem(itemsettings);
         this.menu.addMenuItem(itemsoftware);
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         this.menu.addMenuItem(itemhelp);
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        this.menu.addMenuItem(itemabout);
+        //this.menu.addMenuItem(itemusers);
+        
+        //
+        //this.menu.addMenuItem(itemusers); 
         //this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        //this.menu.addMenuItem(itemabout);
+        
+           
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         this.menu.addMenuItem(iteml);
         this.menu.addMenuItem(this._sessionSubMenu);

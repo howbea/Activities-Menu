@@ -1,0 +1,60 @@
+/* Add your custom extension styling here */
+
+#panel .panel-button#panelActivitiesMenu StBoxLayout {
+  padding: 0 6px;
+  spacing: 6px;
+}
+
+.activities-icon {
+  -st-icon-style: symbolic;
+  icon-size: 16px;
+}
+
+.place-menu-item .button {
+  border-radius: 99px;
+  padding: 3px;
+  min-height: auto;
+}
+
+.place-menu-item .button:ltr { margin-left: 6px; }
+.place-menu-item .button:rtl { margin-right: 6px; }
+
+.place-menu-item {
+}
+
+.activities-menu-item {
+width: 256px;
+}
+
+.activities-submenu-item {
+}
+
+.popup-menu-item {
+}
+
+.popup-menu.panel-menu .user-icon {
+}
+  
+.popup-menu.panel-menu .user-icon.user-avatar {
+  box-shadow: none; }
+
+.popup-menu.panel-menu .user-widget.horizontal {
+  spacing: 6px; }
+  
+#panelActivitiesMenu {
+spacing: 6px;
+}
+
+.popup-menu.panel-menu .user-icon {
+  icon-size: 22px
+}
+  
+.popup-menu.panel-menu .user-icon.user-avatar {
+  box-shadow: none; }
+
+.popup-menu.panel-menu .user-widget.horizontal {
+  spacing: 6px; }
+  
+  .panel-apps-favorites-box {
+  spacing: 6px;
+}

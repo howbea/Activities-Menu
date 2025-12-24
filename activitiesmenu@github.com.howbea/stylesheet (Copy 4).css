@@ -1,0 +1,95 @@
+/* Add your custom extension styling here */
+
+#panel .panel-button#panelActivitiesMenu StBoxLayout {
+  padding: 0 6px;
+  spacing: 6px;
+}
+
+.activities-icon {
+  -st-icon-style: symbolic;
+  icon-size: 16px;
+}
+
+.place-menu-item .button {
+  border-radius: 99px;
+  padding: 3px;
+  min-height: auto;
+}
+
+.place-menu-item .button:ltr { margin-left: 6px; }
+.place-menu-item .button:rtl { margin-right: 6px; }
+
+.place-menu-item {
+}
+
+.activities-menu-item {
+}
+
+.activities-submenu-item {
+}
+
+.popup-menu-item {
+}
+  
+#panelActivitiesMenu {
+spacing: 6px;
+}
+
+.popup-menu.panel-menu .user-icon {
+  icon-size: 2.7em;
+}
+
+.popup-menu.panel-menu .user-widget.horizontal {
+  spacing: 12px;
+  padding-bottom: 12px;
+  padding-top: 12px;
+  padding: 12px;
+  }
+  .popup-menu.panel-menu .user-widget.vertical {
+  spacing: 9px;
+  padding-bottom: 12px;
+  padding-top: 12px;
+  }
+  
+  .panel-apps-favorites-box {
+  spacing: 6px;
+}
+
+  .quick-toggle-menu .user-icon {
+icon-size: 1em;
+}
+
+.quick-toggle-menu .user-widget {
+  spacing: 12px;
+  padding-bottom: 12px;
+  padding-top: 12px;
+  padding: 12px;
+  
+}
+
+.popup-menu.panel-menu .user-widget-label {
+font-size: large;
+font-weight: bold;
+  }
+  
+  .aggregate-menu {
+  min-width: 22em;
+   }
+  .aggregate-menu .popup-menu-ornament {
+    width: 0 !important; }
+  .aggregate-menu .popup-menu-icon {
+    -st-icon-style: symbolic; }
+    .aggregate-menu .popup-menu-icon:ltr {    
+      margin-top: 6px;
+      margin-bottom: 6px;
+      margin-right: 12px;
+      margin-left: 0.75em;}
+    .aggregate-menu .popup-menu-icon:rtl {
+      margin-top: 6px;
+      margin-bottom: 6px;
+      margin-left: 12px;
+      margin-right: 0.75em;}
+  .aggregate-menu .popup-sub-menu .popup-menu-item > :first-child:ltr {
+    margin-left: 1.5em; }
+  .aggregate-menu .popup-sub-menu .popup-menu-item > :first-child:rtl {
+    margin-right: 1.5em; }
