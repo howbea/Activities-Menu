@@ -1,0 +1,13 @@
+/* Add your custom extension styling here */
+      
+.activities-icon{icon-size: 0px;}
+
+.activities-cont{
+    }
+    
+    
+.activities-icon .workspace-dot {
+        border-radius: 999px;
+      min-width: 0.5455em;
+      min-height: 0.5455em;
+      }

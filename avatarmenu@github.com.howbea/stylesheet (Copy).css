@@ -1,0 +1,87 @@
+/* Add your custom extension styling here */
+
+#panel .panel-button#panelActivitiesMenu StBoxLayout {
+  padding: 0 6px;
+  spacing: 6px;
+}
+
+#panel .panel-button#panelActivitiesMenu StBoxLayout {
+      padding: 0 0.2045em;
+      spacing: 5px; }
+
+.activities-icon {
+  -st-icon-style: symbolic;
+  icon-size: 16px;
+}
+
+
+.aggregate-menu .popup-sub-menu .popup-menu-item .panel-apps-favorites-box
+{}
+  
+#panelActivitiesMenu {
+}
+
+.popup-menu.panel-menu .user-icon {
+  icon-size: 2.75em;
+}
+
+.popup-menu.panel-menu .user-widget.horizontal {
+    spacing: 12px;
+    padding: 6px ;
+    padding-bottom: 12px;
+  }
+  .popup-menu.panel-menu .user-widget.vertical {
+  spacing: 12px;
+  padding-bottom: 12px;
+  padding-top: 12px;
+  }
+  
+  .popup-menu.panel-menu .user-widget-label {
+font-size: 1.35em; 
+font-weight: bold;
+  }
+  
+.aggregate-menu .items-item {
+spacing: 12px;
+}
+
+.aggregate-menu .items-box {
+spacing: 9px;
+}
+.space-widget {
+width: 0em;
+}
+  
+  .aggregate-menu {
+  min-width: 22em;
+  border-radius: 27px;
+  }
+  .aggregate-menu .popup-menu-ornament {
+    width: 0 !important; }
+  .aggregate-menu .popup-menu-icon {
+    }
+    .aggregate-menu .popup-menu-icon:ltr {
+      margin-right: 12px;}
+    .aggregate-menu .popup-menu-icon:rtl {
+      margin-left: 12px;}
+      .aggregate-menu .popup-menu-item {margin: 0 6px;}
+      .aggregate-menu .popup-sub-menu {margin: 0 6px;}
+      .aggregate-menu .popup-sub-menu .popup-menu-item{margin: 0px;}
+  .aggregate-menu .popup-sub-menu .popup-menu-item > :first-child:ltr {
+    margin-left: 1em; }
+  .aggregate-menu .popup-sub-menu .popup-menu-item > :first-child:rtl {
+    margin-right: 1em; }
+    
+  .aggregate-menu > :last-child {
+    margin-bottom: 6px; }
+    
+    .aggregate-menu .popup-sub-menu .items-sitem {
+  font-weight: bold;
+  font-size: 0.9em:
+  }
+  
+  .space-item{
+  width:0;
+  height:0;
+  }
+  
