@@ -1,23 +1,63 @@
 /* Add your custom extension styling here */
+      
+.activities-icon{icon-size: 16px;}
 
-#panel .panel-button#panelActivitiesMenu StBoxLayout {
-  padding: 0 6px;
+.activities-cont{
+spacing: 0px;
+    }
+    
+    
+.activities-icon .workspace-dot {
+        border-radius: 999px;
+      min-width: 0.5455em;
+      min-height: 0.5455em;
+      }
+      
+.activities-label {
+font-family: 'debianlogo';
+font-size: 1.9px;
+    
 }
 
-.activities-icon {
-  -st-icon-style: symbolic;
-  icon-size: 16px;
-}
+.main-menu {
+  min-width: 19em;
+  border-radius: 32px;}
+  .main-menu .popup-menu-ornament {
+    width: 0 !important; }
+  .main-menu .popup-menu-ornament {
+    width: 0 !important; }
 
-.place-menu-item .button {
-  border-radius: 99px;
-  padding: 3px;
-  min-height: auto;
-}
-
-.place-menu-item .button:ltr { margin-left: 6px; }
-.place-menu-item .button:rtl { margin-right: 6px; }
-
-.place-menu-item {
- width: 160px;
-}
+  .main-menu .popup-sub-menu .popup-menu-item > :first-child:ltr {
+    margin-left: 0.5em; }
+  .main-menu .popup-sub-menu .popup-menu-item > :first-child:rtl {
+    margin-right: 0.25em; }
+  .main-menu .popup-sub-menu .items-item > :first-child:ltr {
+    margin-left: 0em; }
+  .main-menu .popup-sub-menu .items-item > :first-child:rtl {
+    margin-right: 0em; }
+  .main-menu .popup-sub-menu .items-sitem {
+  font-size: 0.9em;
+  font-weight: bold;
+  }
+  .main-menu .popup-sub-menu .items-sitem > :first-child:ltr {
+    margin-left: 0em; }
+  .main-menu .popup-sub-menu .items-sitem > :first-child:rtl {
+    margin-right: 0em; }
+    
+.app-menu {
+  -st-icon-style: regular;
+  }
+  
+    .workspace-switcher .workspace-dot {
+      border-radius: 999px;
+      min-width: 0.75em;
+      min-height: 0.75em;
+      background-color: #ffffff; }
+      .gwork-space {
+      spacing: 10px;
+      }
+      
+      .workspace-switcher {
+  margin-bottom: 4em;
+  spacing: 12px;
+  padding: 20px 27px; }
