@@ -1,0 +1,131 @@
+/* Add your custom extension styling here */
+.avatar-icon {
+  -st-icon-style: symbolic;
+  icon-size: 16px;
+  padding: 0 2px;
+}
+
+
+.aggregate-menu .popup-sub-menu .popup-menu-item .panel-apps-favorites-box
+{}
+  
+#panelActivitiesMenu {
+}
+
+.popup-menu.panel-menu .user-icon {
+  icon-size: 4.3em;
+}
+
+.popup-menu.panel-menu .user-widget.horizontal {
+    spacing: 15px;
+    margin: 9px ;
+    margin-bottom: 12px ;
+  }
+  
+  .popup-menu.panel-menu .avatar-widget {
+    margin-bottom: 12px;
+    margin-right: 12px;
+  }
+  .popup-menu.panel-menu .user-widget.vertical {
+  spacing: 12px;
+  padding-bottom: 6px;
+  padding-top: 12px;
+  }
+  
+  .popup-menu.panel-menu .user-widget-label {
+font-size: 1.35em; 
+font-weight: bold;
+  }
+  
+.aggregate-menu .items-item {
+spacing: 12px;
+}
+
+.aggregate-menu .items-box {
+spacing: 9px;
+}
+.space-widget {
+width: 0em;
+}
+  
+  .aggregate-menu {
+  min-width: 24em;
+  border-radius: 28px;
+  }
+  .aggregate-menu .popup-menu-ornament {
+    width: 0 !important; }
+  .aggregate-menu .popup-menu-icon {
+    }
+    .aggregate-menu .popup-menu-icon:ltr {
+      margin-right: 0px;}
+    .aggregate-menu .popup-menu-icon:rtl {
+      margin-left: 0px;}
+      .aggregate-menu .popup-menu-item {margin: 0 6px;}
+      .aggregate-menu .popup-sub-menu {margin: 0 6px;}
+      .aggregate-menu .popup-sub-menu .popup-menu-item{margin: 0px;}
+  .aggregate-menu .popup-sub-menu .popup-menu-item > :first-child:ltr {
+    margin-left: 1em; }
+  .aggregate-menu .popup-sub-menu .popup-menu-item > :first-child:rtl {
+    margin-right: 1em; }
+    
+  .aggregate-menu > :last-child {
+    margin-left: 0.75em;
+    
+    margin-bottom: 6px; }
+    
+    .aggregate-menu .popup-sub-menu .items-sitem {
+  font-weight: bold;
+  font-size: 0.9em:
+  }
+  
+  .space-item{
+  width:0;
+  height:0;
+  }
+  
+  
+.popup-menu-ornament {
+    icon-size: 16px !important;
+}
+.qqq>:first-child:ltr {
+    margin-left: 0em; }{
+}
+  
+  .quick-toggle-menu .user-icon {
+icon-size: 4.3em;
+}
+
+.quick-toggle-menu .user-widget {
+  spacing: 15px;
+  margin-bottom: 12px;
+}
+
+.quick-toggle-menu .avatar-widget {
+  margin-bottom: 3px;
+  margin-right: 12px;
+}
+
+.quick-toggle-menu .user-widget-label {
+font-size: large;
+font-weight: bold;
+  }
+  
+.shutdown-icon {
+icon-size: 2.7615em;
+}
+
+.shutdown-label {
+font-size: 1.25em;
+font-weight: bold;
+}
+
+.shutdown-box {
+spacing: 12px;
+ padding-bottom: 12px; 
+}
+
+.avatar-overlay-button {
+    padding: 6.5px;
+    border-radius: 9999px;
+    border: 2px solid #f6f5f4;
+}
