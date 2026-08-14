@@ -1,0 +1,12 @@
+{
+  "name": "Main Menu",
+  "description": "GNOME main menu",
+  "uuid": "mainmenu@github.com.howbea",
+  "gettext-domain": "gnome-shell",
+  "shell-version": [
+    "47",
+    "48",
+    "49",
+    "50"
+  ]
+}
